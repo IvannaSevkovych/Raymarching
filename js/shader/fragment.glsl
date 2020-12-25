@@ -1,5 +1,7 @@
 uniform float time;
+uniform float progress;
 uniform vec2 resolution;
+uniform vec2 mouse;
 uniform sampler2D matcap;
 varying vec2 vUv;
 float PI = 3.141592653589793238;
@@ -51,8 +53,14 @@ float sdBox( vec3 point, vec3 b) {
 // Our aim is to find a sphere with radius 0.4
 float distToTarget(vec3 point) {
     vec3 rotatedPoint = rotate(point, vec3(1.), time/5.);
-    float distToBox = sdBox(rotatedPoint, vec3(0.3));
-    float distToSphere = sdSphere(rotatedPoint, 0.4);
+
+    float distToPlainBox = sdBox(rotatedPoint, vec3(0.2));
+    float distToSphereMain = sdSphere(rotatedPoint, 0.2);
+    float distToRoundedBox = smin(distToPlainBox, distToSphereMain, 0.2);
+    float distToBox = mix(distToRoundedBox, distToSphereMain, progress );
+
+    float distToSphere = sdSphere(point - vec3(mouse*resolution, 0.), 0.1);
+
     return smin(distToBox, distToSphere, 0.1);
 }
 
@@ -67,6 +75,10 @@ vec3 calcNormal( in vec3 p ) // for function f(p)
 }
 
 void main()	{
+    // Background
+    float dist = length(vUv - vec2(0.5));
+    vec3 bg = mix(vec3(0.3), vec3(0.), dist);
+
     // UV of display grid
 	vec2 displayUV = (vUv - vec2(0.5))*resolution;
 
@@ -88,12 +100,17 @@ void main()	{
     }
 
     // Colour indication for pixels, that hit the target
-    vec3 colour = vec3(0.);
+    vec3 colour = bg;
     if(marchedDistance < MARCHING_MAX) {
         vec3 normal = calcNormal(ray*marchedDistance+cameraPosition);
         float diff = dot(vec3(1.), normal);
         vec2 matcapUV = getMatcap(ray, normal);
         colour = texture2D(matcap, matcapUV).xyz;
+
+        float fresnel = pow(1. + dot(ray,normal), 3.);
+        // colour = vec3(fresnel);
+
+        colour = mix(colour,bg,fresnel);
     }
 
 	gl_FragColor = vec4(colour, 1.);
