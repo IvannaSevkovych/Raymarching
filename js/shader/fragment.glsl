@@ -32,6 +32,10 @@ vec2 getMatcap(vec3 eye, vec3 normal) {
   return reflected.xy / m + 0.5;
 }
 
+float rand(vec2 co) {
+    return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
 // polynomial smooth min (k = 0.1);
 float smin( float a, float b, float k )
 {
@@ -60,6 +64,15 @@ float distToTarget(vec3 point) {
     float distToBox = mix(distToRoundedBox, distToSphereMain, progress );
 
     float distToSphere = sdSphere(point - vec3(mouse*resolution, 0.), 0.1);
+
+    for(float i=0.; i<10.; i++) {
+        float randOffset = rand(vec2(i));
+        float phase = 1. - fract(time/3. + randOffset);
+        vec3 dropPosition = vec3(sin(randOffset * 2.* PI), cos(randOffset * 2.* PI), 0.);
+        dropPosition = rotate(dropPosition, vec3(0.,0.,1.), time/5.);
+        float drops = sdSphere(point - dropPosition * phase, 0.15 * randOffset);
+        distToBox = smin(distToBox, drops, 0.3);
+    }
 
     return smin(distToBox, distToSphere, 0.1);
 }
