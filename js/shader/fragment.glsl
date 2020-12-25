@@ -1,18 +1,59 @@
 uniform float time;
 uniform vec2 resolution;
+uniform sampler2D matcap;
 varying vec2 vUv;
 float PI = 3.141592653589793238;
 float THRESHOLD = 0.0001;
 // Distance from camera, when you know for sure that there is no hit
 float MARCHING_MAX = 5.;
 
+mat4 rotationMatrix(vec3 axis, float angle) {
+    axis = normalize(axis);
+    float s = sin(angle);
+    float c = cos(angle);
+    float oc = 1.0 - c;
+
+    return mat4(oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,  0.0,
+                oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,  0.0,
+                oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c,           0.0,
+                0.0,                                0.0,                                0.0,                                1.0);
+}
+
+vec3 rotate(vec3 v, vec3 axis, float angle) {
+	mat4 m = rotationMatrix(axis, angle);
+	return (m * vec4(v, 1.0)).xyz;
+}
+
+vec2 getMatcap(vec3 eye, vec3 normal) {
+  vec3 reflected = reflect(eye, normal);
+  float m = 2.8284271247461903 * sqrt( reflected.z+1.0 );
+  return reflected.xy / m + 0.5;
+}
+
+// polynomial smooth min (k = 0.1);
+float smin( float a, float b, float k )
+{
+    float h = clamp( 0.5+0.5*(b-a)/k, 0.0, 1.0 );
+    return mix( b, a, h ) - k*h*(1.0-h);
+}
+
+
+
 float sdSphere(vec3 point, float radius) {
     return length(point) - radius;
 }
 
-// Our aim is to find a sphere with radius 0.5
+float sdBox( vec3 point, vec3 b) {
+    vec3 q = abs(point) - b;
+    return length(max(q,0.)) + min(max(q.x, max(q.y,q.z)),0.);
+}
+
+// Our aim is to find a sphere with radius 0.4
 float distToTarget(vec3 point) {
-    return sdSphere(point, 0.4);
+    vec3 rotatedPoint = rotate(point, vec3(1.), time/5.);
+    float distToBox = sdBox(rotatedPoint, vec3(0.3));
+    float distToSphere = sdSphere(rotatedPoint, 0.4);
+    return smin(distToBox, distToSphere, 0.1);
 }
 
 // Calculate normal vector for any point on a surface (https://iquilezles.org/www/articles/normalsSDF/normalsSDF.htm)
@@ -51,7 +92,8 @@ void main()	{
     if(marchedDistance < MARCHING_MAX) {
         vec3 normal = calcNormal(ray*marchedDistance+cameraPosition);
         float diff = dot(vec3(1.), normal);
-        colour = vec3(diff);
+        vec2 matcapUV = getMatcap(ray, normal);
+        colour = texture2D(matcap, matcapUV).xyz;
     }
 
 	gl_FragColor = vec4(colour, 1.);

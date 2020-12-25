@@ -3,6 +3,8 @@ import fragment from "./shader/fragment.glsl";
 import vertex from "./shader/vertex.glsl";
 let OrbitControls = require("three-orbit-controls")(THREE);
 
+import matcap from "../matcap_1.png"
+
 export default class Sketch {
   constructor(options) {
     this.scene = new THREE.Scene();
@@ -82,6 +84,7 @@ export default class Sketch {
       side: THREE.DoubleSide,
       uniforms: {
         time: { type: "f", value: 0 },
+        matcap: { value: new THREE.TextureLoader().load(matcap) },
         resolution: { value: resolution },
         uvRate1: {
           value: new THREE.Vector2(1, 1)

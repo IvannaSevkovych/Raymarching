@@ -4,6 +4,8 @@
     "glslify-deps": "^1.3.2"
   },
   "dependencies": {
+    "glslify": "^7.1.1",
+    "parcel-plugin-glslify": "^0.1.0",
     "three": "^0.123.0",
     "three-orbit-controls": "^82.1.0"
   }
